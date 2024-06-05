@@ -7,9 +7,9 @@
 - [x] Building GenAI Chatbot using Gemini and Firebase
 - [x] Building Gold Reporter Chatbot using Firebase and Web Scraping technique
 - [x] Building Image Resizer Chatbot using Firebase
-- [ ] Building LINE Chatbot using Dialogflow
-  - <https://wutthipong.medium.com/ทำ-line-chatbot-เชื่อมกับ-dialogflow-และ-gemini-โดยเลือกถามคนหรือถามบอทได้-ตอนที่-1-line-เชื่อมกับ-02b9840f0f6d>
-  - <https://wutthipong.medium.com/ทำ-line-chatbot-เชื่อมกับ-dialogflow-และ-gemini-โดยเลือกถามคนหรือถามบอทได้-ตอนที่-2-line-เชื่อมกับ-4e16570bf745>
+- [x] Building LINE Chatbot using Dialogflow
+  - [ ] <https://wutthipong.medium.com/ทำ-line-chatbot-เชื่อมกับ-dialogflow-และ-gemini-โดยเลือกถามคนหรือถามบอทได้-ตอนที่-1-line-เชื่อมกับ-02b9840f0f6d>
+  - [ ] <https://wutthipong.medium.com/ทำ-line-chatbot-เชื่อมกับ-dialogflow-และ-gemini-โดยเลือกถามคนหรือถามบอทได้-ตอนที่-2-line-เชื่อมกับ-4e16570bf745>
 - [ ] ChatGPT bot in LINE Group to answer all of your questions!
   - <https://medium.com/linedevth/line-chatgpt-group-9b2fc5ea94d3>
 - [ ] Building Shorten URL Chatbot using Dialogflow and Bitly API

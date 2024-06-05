@@ -10,7 +10,7 @@
 import {onRequest} from "firebase-functions/v2/https";
 import * as logger from "firebase-functions/logger";
 import {pubsub} from "firebase-functions";
-
+import {WebhookClient, type WebhookClient as WebhookClientType} from "dialogflow-fulfillment";
 // for accessing the db connection
 import * as admin from "firebase-admin";
 admin.initializeApp();
@@ -80,3 +80,46 @@ exports.gold = pubsub
 
     return null; // Add this line to ensure all code paths return a value
   });
+
+process.env.DEBUG = "dialogflow:debug";
+
+exports.dialogflowFirebaseFulfillment = onRequest((request, response) => {
+  const agent = new WebhookClient({request, response});
+  logger.log("Dialogflow Request headers: " + JSON.stringify(request.headers));
+  logger.log("Dialogflow Request body: " + JSON.stringify(request.body));
+
+  const welcome = (agent: WebhookClientType) => {
+    agent.add("Welcome to my agent!");
+  };
+
+  const fallback = (agent: WebhookClientType) => {
+    agent.add("I didn't understand");
+    agent.add("I'm sorry, can you try again?");
+  };
+
+  const bodyMassIndex = (agent: WebhookClientType) => {
+    const weight = agent.parameters.weight as unknown as number;
+    const height = agent.parameters.height as unknown as number / 100;
+    const bmi = Number((weight / (height * height)).toFixed(2));
+    let result = "ขออภัย หนูไม่เข้าใจ";
+
+    if (bmi < 18.5) {
+      result = "คุณผอมไป กินข้าวบ้างนะ";
+    } else if (bmi >= 18.5 && bmi <= 22.9) {
+      result = "คุณหุ่นดีจุงเบย";
+    } else if (bmi >= 23 && bmi <= 24.9) {
+      result = "คุณเริ่มจะท้วมแล้วนะ";
+    } else if (bmi >= 25.8 && bmi <= 29.9) {
+      result = "คุณอ้วนละ ออกกำลังกายหน่อยนะ";
+    } else if (bmi > 30) {
+      result = "คุณอ้วนเกินไปละ หาหมอเหอะ";
+    }
+    agent.add(result);
+  };
+
+  const intentMap = new Map();
+  intentMap.set("Default Welcome Intent", welcome);
+  intentMap.set("Default Fallback Intent", fallback);
+  intentMap.set("BMI - custom - yes", bodyMassIndex);
+  agent.handleRequest(intentMap);
+});
