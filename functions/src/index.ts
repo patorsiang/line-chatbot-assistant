@@ -15,15 +15,10 @@ import {pubsub} from "firebase-functions";
 import * as admin from "firebase-admin";
 admin.initializeApp();
 
-// for network requests
-import axios from "axios";
-
-// for web scraping requests
-import {load} from "cheerio";
-
 import * as line from "./utils/line";
 import * as gemini from "./utils/gemini";
 import * as storage from "./utils/cloudstorage";
+import {getCurrentGoldPrice} from "./utils/gold";
 // Start writing functions
 // https://firebase.google.com/docs/functions/typescript
 
@@ -72,24 +67,7 @@ exports.gold = pubsub
   .schedule("0 */1 * * *")
   .timeZone("Asia/Bangkok")
   .onRun(async () => {
-    const response = await axios.get("https://goldtraders.or.th/default.aspx");
-    const html = response.data;
-    const $ = load(html);
-    const selector = $(
-      "#DetailPlace_uc_goldprices1_GoldPricesUpdatePanel font[color]"
-    );
-    if (selector.length !== 4) {
-      return null;
-    }
-
-    let priceCurrent = "";
-    selector.each((index, element) => {
-      if (index === 0) {
-        priceCurrent = $(element).text();
-      } else {
-        priceCurrent = priceCurrent.concat("|", $(element).text());
-      }
-    });
+    const priceCurrent = await getCurrentGoldPrice() || "";
 
     logger.log(priceCurrent);
 
