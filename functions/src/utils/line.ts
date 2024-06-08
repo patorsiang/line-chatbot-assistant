@@ -14,7 +14,21 @@ export const getImageBinary = async (messageId: string) => {
 
 export const reply = (
   token: string,
-  payload: Array<{ type: string; text: string }>
+  payload: Array<{
+    type: string;
+    text?: string;
+    sender?: { name?: string; iconUrl?: string };
+    quickReply?: {
+      items: Array<{
+        type: string;
+        action: {
+          type: string;
+          label: string;
+          text: string;
+        };
+      }>;
+    };
+  }>
 ) => {
   return axios({
     method: "post",

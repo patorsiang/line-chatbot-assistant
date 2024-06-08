@@ -95,7 +95,49 @@ exports.dialogflowFirebaseFulfillment = onRequest((request, response) => {
     agent.add("Welcome to my agent!");
   };
 
-  const fallback = (agent: WebhookClientType) => {
+  const fallback = async (agent: WebhookClientType) => {
+    const replyToken =
+      request.body.originalDetectIntentRequest.payload.data.replyToken;
+
+    const question = "คุณต้องการสอบถามกับ Bot หรือ Staff";
+    const answer1 = "สอบถามกับ Bot " + agent.query;
+    const answer2 = "สอบถามกับ Staff " + agent.query;
+
+    // await line.reply(
+    //   replyToken,
+    //   template.quickreply(question, answer1, answer2)
+    // );
+    await line.reply(replyToken, [
+      {
+        type: "text",
+        text: question,
+        sender: {
+          name: "Dialogflow",
+          // iconUrl: "https://wutthipong.info/images/geminiicon.png",
+        },
+        quickReply: {
+          items: [
+            {
+              type: "action",
+              action: {
+                type: "message",
+                label: "สอบถามกับ Bot",
+                text: answer1,
+              },
+            },
+            {
+              type: "action",
+              action: {
+                type: "message",
+                label: "สอบถามกับ Staff",
+                text: answer2,
+              },
+            },
+          ],
+        },
+      },
+    ]);
+
     agent.add("I didn't understand");
     agent.add("I'm sorry, can you try again?");
   };
