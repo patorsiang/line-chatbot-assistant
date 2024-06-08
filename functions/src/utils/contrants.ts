@@ -5,3 +5,8 @@ export const LINE_HEADER = {
   "Content-Type": "application/json",
   "Authorization": `Bearer ${process.env.CHANNEL_ACCESS_TOKEN}`,
 };
+
+export const LINE_NOTIFY_HEADER = {
+  "Content-Type": "application/x-www-form-urlencoded",
+  "Authorization": "Bearer " + process.env.NOTIFY_TOKEN,
+};

@@ -17,6 +17,8 @@ import {
 // for accessing the db connection
 import * as admin from "firebase-admin";
 admin.initializeApp();
+import * as NodeCache from "node-cache";
+const myCache = new NodeCache();
 
 import * as line from "./utils/line";
 import * as gemini from "./utils/gemini";
@@ -96,6 +98,8 @@ exports.dialogflowFirebaseFulfillment = onRequest((request, response) => {
   };
 
   const fallback = async (agent: WebhookClientType) => {
+    const userId =
+      request.body.originalDetectIntentRequest.payload.data.source.userId;
     const replyToken =
       request.body.originalDetectIntentRequest.payload.data.replyToken;
 
@@ -103,43 +107,117 @@ exports.dialogflowFirebaseFulfillment = onRequest((request, response) => {
     const answer1 = "สอบถามกับ Bot " + agent.query;
     const answer2 = "สอบถามกับ Staff " + agent.query;
 
-    // await line.reply(
-    //   replyToken,
-    //   template.quickreply(question, answer1, answer2)
-    // );
-    await line.reply(replyToken, [
-      {
-        type: "text",
-        text: question,
-        sender: {
-          name: "Dialogflow",
-          // iconUrl: "https://wutthipong.info/images/geminiicon.png",
-        },
-        quickReply: {
-          items: [
-            {
-              type: "action",
-              action: {
-                type: "message",
-                label: "สอบถามกับ Bot",
-                text: answer1,
-              },
-            },
-            {
-              type: "action",
-              action: {
-                type: "message",
-                label: "สอบถามกับ Staff",
-                text: answer2,
-              },
-            },
-          ],
-        },
-      },
-    ]);
+    logger.log("UserId: " + userId);
+    let mode = myCache.get(userId);
+    logger.log("Mode: " + mode);
+    if (mode === undefined) {
+      mode = "Dialogflow";
+    }
 
-    agent.add("I didn't understand");
-    agent.add("I'm sorry, can you try again?");
+    let notifyStatus = myCache.get("Notify" + userId);
+    if (notifyStatus === undefined) {
+      notifyStatus = true;
+    }
+
+    if (agent.query == "reset") {
+      mode = "Dialogflow";
+      logger.log("Change Mode to: " + mode);
+      await line.reply(replyToken, [
+        {
+          type: "text",
+          text: "ระบบตั้งค่าเริ่มต้นให้คุณแล้ว สอบถามได้เลยค่ะ",
+        },
+      ]);
+      myCache.set(userId, mode, 600);
+      logger.log("Lastest Mode: " + mode);
+    }
+
+    let modifiedQuery = agent.query;
+    if (mode == "bot") {
+      modifiedQuery = "สอบถามกับ Bot" + modifiedQuery;
+    } else if (mode == "staff") {
+      modifiedQuery = "สอบถามกับ Staff" + agent.query;
+    }
+
+    if (modifiedQuery.includes("สอบถามกับ Staff")) {
+      mode = "staff";
+      logger.log("Change Mode to: " + mode);
+      const profile = await line.getUserProfile(userId);
+      logger.log(profile.data);
+      if (notifyStatus) {
+        line.notify({
+          message:
+            "มีผู้ใช้ชื่อ " +
+            profile.data.displayName +
+            " ต้องการติดต่อ " +
+            modifiedQuery,
+          imageFullsize: profile.data.pictureUrl,
+          imageThumbnail: profile.data.pictureUrl,
+        });
+        await line.reply(replyToken, [
+          {
+            type: "text",
+
+            text:
+              modifiedQuery +
+              " เราได้แจ้งเตือนไปยัง Staff แล้วค่ะ Staff จะรีบมาตอบนะคะ",
+          },
+        ]);
+      }
+      myCache.set("Notify" + userId, false, 600);
+    } else if (modifiedQuery.includes("สอบถามกับ Bot")) {
+      mode = "bot";
+      logger.log("Change Mode to: " + mode);
+      let question = modifiedQuery;
+      question = question.replace("สอบถามกับ Bot", "");
+      const msg = await gemini.chat(question);
+      await line.reply(replyToken, [
+        {
+          type: "text",
+          sender: {
+            name: "Gemini",
+            iconUrl: "https://wutthipong.info/images/geminiicon.png",
+          },
+          text: msg,
+        },
+      ]);
+    } else {
+      mode = "Dialogflow";
+
+      await line.reply(replyToken, [
+        {
+          type: "text",
+          text: question,
+          sender: {
+            name: "Dialogflow",
+            // iconUrl: "https://wutthipong.info/images/geminiicon.png",
+          },
+          quickReply: {
+            items: [
+              {
+                type: "action",
+                action: {
+                  type: "message",
+                  label: "สอบถามกับ Bot",
+                  text: answer1,
+                },
+              },
+              {
+                type: "action",
+                action: {
+                  type: "message",
+                  label: "สอบถามกับ Staff",
+                  text: answer2,
+                },
+              },
+            ],
+          },
+        },
+      ]);
+    }
+
+    myCache.set(userId, mode, 600);
+    logger.log("Lastest Mode: " + mode);
   };
 
   const bodyMassIndex = (agent: WebhookClientType) => {

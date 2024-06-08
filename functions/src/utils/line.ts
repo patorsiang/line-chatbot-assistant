@@ -1,20 +1,9 @@
 import axios from "axios";
+import * as qs from "qs";
 
-import {LINE_HEADER, LINE_MESSAGING_API, LINE_CONTENT_API} from "./contrants";
+import {LINE_HEADER, LINE_NOTIFY_HEADER, LINE_MESSAGING_API, LINE_CONTENT_API} from "./contrants";
 
-export const getImageBinary = async (messageId: string) => {
-  const originalImage = await axios({
-    method: "get",
-    headers: LINE_HEADER,
-    url: `${LINE_CONTENT_API}/${messageId}/content`,
-    responseType: "arraybuffer",
-  });
-  return originalImage.data;
-};
-
-export const reply = (
-  token: string,
-  payload: Array<{
+type LINE_MESSAGING_PAYLOAD_TYPE = Array<{
     type: string;
     text?: string;
     sender?: { name?: string; iconUrl?: string };
@@ -29,6 +18,26 @@ export const reply = (
       }>;
     };
   }>
+
+type LINE_NOTIFY_PAYLOAD = {
+  message: string,
+  imageFullsize: string,
+  imageThumbnail: string,
+}
+
+export const getImageBinary = async (messageId: string) => {
+  const originalImage = await axios({
+    method: "get",
+    headers: LINE_HEADER,
+    url: `${LINE_CONTENT_API}/${messageId}/content`,
+    responseType: "arraybuffer",
+  });
+  return originalImage.data;
+};
+
+export const reply = (
+  token: string,
+  payload: LINE_MESSAGING_PAYLOAD_TYPE
 ) => {
   return axios({
     method: "post",
@@ -206,5 +215,22 @@ export const replyResizeImg = (
         },
       ],
     },
+  });
+};
+
+export const getUserProfile = (userId: string) => {
+  return axios({
+    method: "get",
+    url: "https://api.line.me/v2/bot/profile/" + userId,
+    headers: LINE_HEADER,
+  });
+};
+
+export const notify = (payload: LINE_NOTIFY_PAYLOAD) => {
+  return axios({
+    method: "post",
+    url: "https://notify-api.line.me/api/notify",
+    headers: LINE_NOTIFY_HEADER,
+    data: qs.stringify(payload),
   });
 };
