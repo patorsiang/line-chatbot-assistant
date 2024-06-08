@@ -10,7 +10,10 @@
 import {onRequest} from "firebase-functions/v2/https";
 import * as logger from "firebase-functions/logger";
 import {pubsub} from "firebase-functions";
-import {WebhookClient, type WebhookClient as WebhookClientType} from "dialogflow-fulfillment";
+import {
+  WebhookClient,
+  type WebhookClient as WebhookClientType,
+} from "dialogflow-fulfillment";
 // for accessing the db connection
 import * as admin from "firebase-admin";
 admin.initializeApp();
@@ -67,7 +70,7 @@ exports.gold = pubsub
   .schedule("0 */1 * * *")
   .timeZone("Asia/Bangkok")
   .onRun(async () => {
-    const priceCurrent = await getCurrentGoldPrice() || "";
+    const priceCurrent = (await getCurrentGoldPrice()) || "";
 
     logger.log(priceCurrent);
 
@@ -99,7 +102,7 @@ exports.dialogflowFirebaseFulfillment = onRequest((request, response) => {
 
   const bodyMassIndex = (agent: WebhookClientType) => {
     const weight = agent.parameters.weight as unknown as number;
-    const height = agent.parameters.height as unknown as number / 100;
+    const height = (agent.parameters.height as unknown as number) / 100;
     const bmi = Number((weight / (height * height)).toFixed(2));
     let result = "ขออภัย หนูไม่เข้าใจ";
 
