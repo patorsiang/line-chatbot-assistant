@@ -1,29 +1,35 @@
+import * as logger from "firebase-functions/logger";
 import axios from "axios";
 import * as qs from "qs";
 
-import {LINE_HEADER, LINE_NOTIFY_HEADER, LINE_MESSAGING_API, LINE_CONTENT_API} from "./contrants";
+import {
+  LINE_HEADER,
+  LINE_NOTIFY_HEADER,
+  LINE_MESSAGING_API,
+  LINE_CONTENT_API,
+} from "./contrants";
 
 type LINE_MESSAGING_PAYLOAD_TYPE = Array<{
-    type: string;
-    text?: string;
-    sender?: { name?: string; iconUrl?: string };
-    quickReply?: {
-      items: Array<{
+  type: string;
+  text?: string;
+  sender?: { name?: string; iconUrl?: string };
+  quickReply?: {
+    items: Array<{
+      type: string;
+      action: {
         type: string;
-        action: {
-          type: string;
-          label: string;
-          text: string;
-        };
-      }>;
-    };
-  }>
+        label: string;
+        text: string;
+      };
+    }>;
+  };
+}>;
 
 type LINE_NOTIFY_PAYLOAD = {
-  message: string,
-  imageFullsize: string,
-  imageThumbnail: string,
-}
+  message: string;
+  imageFullsize: string;
+  imageThumbnail: string;
+};
 
 export const getImageBinary = async (messageId: string) => {
   const originalImage = await axios({
@@ -35,10 +41,7 @@ export const getImageBinary = async (messageId: string) => {
   return originalImage.data;
 };
 
-export const reply = (
-  token: string,
-  payload: LINE_MESSAGING_PAYLOAD_TYPE
-) => {
+export const reply = (token: string, payload: LINE_MESSAGING_PAYLOAD_TYPE) => {
   return axios({
     method: "post",
     url: `${LINE_MESSAGING_API}/message/reply`,
@@ -233,4 +236,21 @@ export const notify = (payload: LINE_NOTIFY_PAYLOAD) => {
     headers: LINE_NOTIFY_HEADER,
     data: qs.stringify(payload),
   });
+};
+
+export const loading = async (userId: string) => {
+  try {
+    const response = await axios({
+      method: "post",
+      url: "https://api.line.me/v2/bot/chat/loading/start",
+      headers: LINE_HEADER,
+      data: {chatId: userId, loadingSeconds: 30},
+    });
+    logger.log(response);
+    return response;
+  } catch (error) {
+    logger.error(error);
+    // Handle the error or rethrow it if needed
+    throw error;
+  }
 };

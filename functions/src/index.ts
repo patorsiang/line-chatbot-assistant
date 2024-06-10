@@ -15,14 +15,14 @@ import {
   type WebhookClient as WebhookClientType,
 } from "dialogflow-fulfillment";
 // for accessing the db connection
-import * as admin from "firebase-admin";
-admin.initializeApp();
 import * as NodeCache from "node-cache";
 const myCache = new NodeCache();
 
 import * as line from "./utils/line";
 import * as gemini from "./utils/gemini";
 import * as storage from "./utils/cloudstorage";
+import * as firestore from "./utils/firestore";
+import * as dialogflow from "./utils/dialogflow";
 import {getCurrentGoldPrice} from "./utils/gold";
 // Start writing functions
 // https://firebase.google.com/docs/functions/typescript
@@ -36,14 +36,152 @@ import {getCurrentGoldPrice} from "./utils/gold";
 exports.webhook = onRequest(async (req, res) => {
   if (req.method === "POST") {
     const events = req.body.events;
+
     for (const event of events) {
+      const userId = event.source.userId;
+      const replyToken = event.replyToken;
+      const userData = await firestore.getUser(userId);
+
+      let userMode = "bot";
+      if (userData == undefined) {
+        const profile = await line.getUserProfile(userId);
+        await firestore.updateUser(userMode, profile.data);
+      } else {
+        userMode = userData.mode;
+      }
+
       switch (event.type) {
       case "message":
         if (event.message.type === "text") {
-          const msg = await gemini.chat(event.message.text);
-          logger.log("REPLY TEXT: ", msg);
-          await line.reply(event.replyToken, [{type: "text", text: msg}]);
-          break;
+          const notifyStatus = [
+            ...((myCache.get("NotifyTheStaff") as Array<string>) ?? []),
+          ];
+
+          if (event.message.text.toLowerCase() == "mode") {
+            await line.reply(replyToken, [
+              {
+                type: "text",
+                text:
+                    "ตอนนี้คุณอยู่ในโหมดคคุยกับ " +
+                    userMode +
+                    " หากต้องการเปลี่ยนโหมดสามารถเลือกได้เลยค่ะ",
+                quickReply: {
+                  items: [
+                    {
+                      type: "action",
+                      action: {
+                        type: "message",
+                        label: "Bot",
+                        text: "Bot",
+                      },
+                    },
+                    {
+                      type: "action",
+                      action: {
+                        type: "message",
+                        label: "Staff",
+                        text: "Staff",
+                      },
+                    },
+                  ],
+                },
+              },
+            ]);
+            break;
+          } else if (event.message.text.toLowerCase() == "gemini") {
+            logger.log("Change mode to Gemini");
+            await line.reply(replyToken, [
+              {
+                type: "text",
+                text: "คุณได้เปลี่ยนเป็นโหมดคุยกับ Bot แล้ว สามารถสอบถามต่อได้เลยค่ะ",
+              },
+            ]);
+            await firestore.updateUser("gemini", userData);
+            break;
+          } else if (event.message.text.toLowerCase() == "bot") {
+            logger.log("Change mode to Bot");
+            await line.reply(replyToken, [
+              {
+                type: "text",
+                text: "คุณได้เปลี่ยนเป็นโหมดคุยกับ Bot แล้ว สามารถสอบถามต่อได้เลยค่ะ",
+              },
+            ]);
+            await firestore.updateUser("bot", userData);
+            break;
+          } else if (event.message.text.toLowerCase() == "staff") {
+            logger.log("Change mode to Staff");
+            await line.reply(replyToken, [
+              {
+                type: "text",
+                text: "คุณได้เปลี่ยนเป็นโหมดคุยกับ Staff แล้ว สามารถสอบถามต่อได้เลยค่ะ",
+              },
+            ]);
+            await firestore.updateUser("staff", userData);
+            break;
+          }
+          logger.log("User Mode " + userMode);
+
+          if (userMode == "staff") {
+            if (!notifyStatus.includes(userId)) {
+              notifyStatus.push(userId);
+              await line.notify({
+                message:
+                    "มีผู้ใช้ชื่อ " +
+                    userData?.displayName +
+                    " ต้องการติดต่อ " +
+                    event.message.text,
+                imageFullsize: userData?.pictureUrl,
+                imageThumbnail: userData?.pictureUrl,
+              });
+              await line.reply(replyToken, [
+                {
+                  type: "text",
+                  text: "เราได้แจ้งเตือนไปยัง Staff แล้วค่ะ รอสักครู่นะคะ",
+                },
+              ]);
+            }
+            myCache.set("NotifyTheStaff", notifyStatus, 600);
+            break;
+          } else if (userMode == "gemini") {
+            const question = event.message.text;
+            await line.loading(userId);
+            const msg = await gemini.chat(question);
+            console.log(msg);
+            if (msg.includes("ขออภัยครับ ไม่พบข้อมูลดังกล่าว")) {
+              await line.reply(replyToken, [
+                {
+                  type: "text",
+                  text: "ขออภัยครับ ไม่พบข้อมูลดังกล่าว ตอนนี้คุณอยู่ในโหมดคคุยกับ Bot คุณสามารถถามคำถามต่อไป หรือหากต้องการเปลี่ยนโหมดเป็น Staff สามารถเลือกได้เลยค่ะ",
+
+                  quickReply: {
+                    items: [
+                      {
+                        type: "action",
+                        action: {
+                          type: "message",
+                          label: "Staff",
+                          text: "Staff",
+                        },
+                      },
+                    ],
+                  },
+                },
+              ]);
+            } else {
+              await line.reply(replyToken, [
+                {
+                  type: "text",
+                  sender: {
+                    name: "Gemini",
+                    iconUrl: "https://wutthipong.info/images/geminiicon.png",
+                  },
+                  text: msg,
+                },
+              ]);
+            }
+          } else if (userMode == "bot") {
+            await dialogflow.postToDialogflow(req as unknown as Request);
+          }
         }
         if (event.message.type === "image") {
           const imageBinary = await line.getImageBinary(event.message.id);
@@ -76,9 +214,9 @@ exports.gold = pubsub
 
     logger.log(priceCurrent);
 
-    const priceLast = await admin.firestore().doc("line/gold").get();
+    const priceLast = await firestore.getLastGoldPrice();
     if (!priceLast.exists || priceLast.data()?.price !== priceCurrent) {
-      await admin.firestore().doc("line/gold").set({price: priceCurrent});
+      firestore.updateGoldPrice(priceCurrent);
       line.broadcast(priceCurrent);
       logger.log("BROADCAST:", priceCurrent);
     }
