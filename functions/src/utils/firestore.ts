@@ -1,8 +1,8 @@
 import * as logger from "firebase-functions/logger";
 import {getFirestore, Timestamp} from "firebase-admin/firestore";
-import {initializeApp} from "firebase-admin";
+import * as admin from "firebase-admin";
 
-initializeApp();
+admin.initializeApp();
 const db = getFirestore();
 
 export const getLastGoldPrice = () => {

@@ -1,20 +1,20 @@
 import * as logger from "firebase-functions/logger";
 
-import axios, {AxiosRequestConfig} from "axios";
+import axios, {AxiosRequestHeaders} from "axios";
 
 export const postToDialogflow = async (request: Request) => {
   logger.log("Dialogflow");
-  const url = "dialogflow.cloud.google.com";
+  const host = "dialogflow.cloud.google.com";
   try {
-    const axiosConfig: AxiosRequestConfig = {
-      ...request.headers,
-      url,
-    };
-
     await axios.post(
-      `https://${url}/v1/integrations/line/webhook/d396340f-7d5f-4af1-9f42-b4aec551c1f0`,
+      `https://${host}/v1/integrations/line/webhook/d396340f-7d5f-4af1-9f42-b4aec551c1f0`,
       JSON.stringify(request.body),
-      axiosConfig
+      {
+        headers: {
+          ...(request.headers as unknown as AxiosRequestHeaders),
+          host,
+        },
+      }
     );
   } catch (error) {
     logger.error(error);
