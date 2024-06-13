@@ -146,7 +146,7 @@ exports.webhook = onRequest(async (req, res) => {
             const question = event.message.text;
             await line.loading(userId);
             const msg = await gemini.chat(question);
-            console.log(msg);
+            logger.log(msg);
             if (msg.includes("ขออภัยครับ ไม่พบข้อมูลดังกล่าว")) {
               await line.reply(replyToken, [
                 {

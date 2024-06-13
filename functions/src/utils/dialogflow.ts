@@ -7,7 +7,7 @@ export const postToDialogflow = async (request: Request) => {
   const host = "dialogflow.cloud.google.com";
   try {
     await axios.post(
-      `https://${host}/v1/integrations/line/webhook/d396340f-7d5f-4af1-9f42-b4aec551c1f0`,
+      `https://${host}/v1/integrations/line/webhook/${process.env.DIALOGFLOW_KEY}`,
       JSON.stringify(request.body),
       {
         headers: {
