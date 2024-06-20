@@ -121,4 +121,63 @@ flowchart TB
   saveCache-->stop([end])
 ```
 
+### Flow Chart (revised)
+
+```mermaid
+---
+title: This flow for the lab
+---
+sequenceDiagram
+  actor User
+  par add friend process
+    User->>Line: add Assistant bot
+  end
+
+  par Building Gold Reporter Chatbot using Firebase and Web Scraping technique
+    Pubsub-->>Gold: Snap web
+    Pubsub-->>Firestore: Save the data (if there are changes)
+    Pubsub-->>Line: broadcast Flex Gold to Line user
+  end
+
+  par Gemini x Dialogflow
+    alt message.type = text
+      Function-->>Dialogflow: call the dialogflow api
+      Note over Function,Dialogflow: go to the case in dialogflow
+    else message.type = image
+      User->>Line: image
+      Line-->>Function: call webhook
+      Function-->>Storage:  save the image
+      Storage-->>Function: resize the image
+      Function-->>gemini: get an answer
+      Function-->>Line: send the resized image in Flex with message from gemini
+    end
+  end
+```
+
+```mermaid
+---
+title: Dialogflow
+---
+flowchart TB
+  start([start])-->msg[/input text/]
+  msg-->greetings{greetings ?}
+  greetings-->|Yes|opt1(send the message greeting)
+  opt1-->saveCache(save userID and mode)
+  greetings-->|No|IBM{Am I fat?}
+  IBM-->|Yes|opt2(calculate the IBM)
+  opt2-->IBMmsg(sent back to line)
+  IBMmsg-->saveCache
+  IBM-->|No|falloutOpt1(get uerID)
+  falloutOpt1-->falloutOpt2(get replyToken)
+  falloutOpt2-->falloutOpt3{mode?}
+  falloutOpt3-->|gemini|falloutOpt4(ask gemini)
+  falloutOpt4-->falloutOpt5(save to firestore)
+  falloutOpt3-->|chatGPT|falloutOpt6(ask chatGPT)
+  falloutOpt6-->falloutOpt5(save to firestore)
+  falloutOpt3-->|pat|falloutOpt7(noti to pat)
+  falloutOpt7-->falloutOpt5(save to firestore)
+  falloutOpt5-->stop([end])
+  saveCache-->stop([end])
+```
+
 ## Thing 2: Test Our Idea

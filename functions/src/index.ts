@@ -38,150 +38,11 @@ exports.webhook = onRequest(async (req, res) => {
     const events = req.body.events;
 
     for (const event of events) {
-      const userId = event.source.userId;
-      const replyToken = event.replyToken;
-      const userData = await firestore.getUser(userId);
-
-      let userMode = "bot";
-      if (userData == undefined) {
-        const profile = await line.getUserProfile(userId);
-        await firestore.updateUser(userMode, profile.data);
-      } else {
-        userMode = userData.mode;
-      }
-
+      const userId = events.source.userId;
       switch (event.type) {
       case "message":
         if (event.message.type === "text") {
-          const notifyStatus = [
-            ...((myCache.get("NotifyTheStaff") as Array<string>) ?? []),
-          ];
-
-          if (event.message.text.toLowerCase() == "mode") {
-            await line.reply(replyToken, [
-              {
-                type: "text",
-                text:
-                    "ตอนนี้คุณอยู่ในโหมดคคุยกับ " +
-                    userMode +
-                    " หากต้องการเปลี่ยนโหมดสามารถเลือกได้เลยค่ะ",
-                quickReply: {
-                  items: [
-                    {
-                      type: "action",
-                      action: {
-                        type: "message",
-                        label: "Bot",
-                        text: "Bot",
-                      },
-                    },
-                    {
-                      type: "action",
-                      action: {
-                        type: "message",
-                        label: "Staff",
-                        text: "Staff",
-                      },
-                    },
-                  ],
-                },
-              },
-            ]);
-            break;
-          } else if (event.message.text.toLowerCase() == "gemini") {
-            logger.log("Change mode to Gemini");
-            await line.reply(replyToken, [
-              {
-                type: "text",
-                text: "คุณได้เปลี่ยนเป็นโหมดคุยกับ Bot แล้ว สามารถสอบถามต่อได้เลยค่ะ",
-              },
-            ]);
-            await firestore.updateUser("gemini", userData);
-            break;
-          } else if (event.message.text.toLowerCase() == "bot") {
-            logger.log("Change mode to Bot");
-            await line.reply(replyToken, [
-              {
-                type: "text",
-                text: "คุณได้เปลี่ยนเป็นโหมดคุยกับ Bot แล้ว สามารถสอบถามต่อได้เลยค่ะ",
-              },
-            ]);
-            await firestore.updateUser("bot", userData);
-            break;
-          } else if (event.message.text.toLowerCase() == "staff") {
-            logger.log("Change mode to Staff");
-            await line.reply(replyToken, [
-              {
-                type: "text",
-                text: "คุณได้เปลี่ยนเป็นโหมดคุยกับ Staff แล้ว สามารถสอบถามต่อได้เลยค่ะ",
-              },
-            ]);
-            await firestore.updateUser("staff", userData);
-            break;
-          }
-          logger.log("User Mode " + userMode);
-
-          if (userMode == "staff") {
-            if (!notifyStatus.includes(userId)) {
-              notifyStatus.push(userId);
-              await line.notify({
-                message:
-                    "มีผู้ใช้ชื่อ " +
-                    userData?.displayName +
-                    " ต้องการติดต่อ " +
-                    event.message.text,
-                imageFullsize: userData?.pictureUrl,
-                imageThumbnail: userData?.pictureUrl,
-              });
-              await line.reply(replyToken, [
-                {
-                  type: "text",
-                  text: "เราได้แจ้งเตือนไปยัง Staff แล้วค่ะ รอสักครู่นะคะ",
-                },
-              ]);
-            }
-            myCache.set("NotifyTheStaff", notifyStatus, 600);
-            break;
-          } else if (userMode == "gemini") {
-            const question = event.message.text;
-            await line.loading(userId);
-            const msg = await gemini.chat(question);
-            logger.log(msg);
-            if (msg.includes("ขออภัยครับ ไม่พบข้อมูลดังกล่าว")) {
-              await line.reply(replyToken, [
-                {
-                  type: "text",
-                  text: "ขออภัยครับ ไม่พบข้อมูลดังกล่าว ตอนนี้คุณอยู่ในโหมดคคุยกับ Bot คุณสามารถถามคำถามต่อไป หรือหากต้องการเปลี่ยนโหมดเป็น Staff สามารถเลือกได้เลยค่ะ",
-
-                  quickReply: {
-                    items: [
-                      {
-                        type: "action",
-                        action: {
-                          type: "message",
-                          label: "Staff",
-                          text: "Staff",
-                        },
-                      },
-                    ],
-                  },
-                },
-              ]);
-            } else {
-              await line.reply(replyToken, [
-                {
-                  type: "text",
-                  sender: {
-                    name: "Gemini",
-                    iconUrl: "https://wutthipong.info/images/geminiicon.png",
-                  },
-                  text: msg,
-                },
-              ]);
-            }
-          } else if (userMode == "bot") {
-            await dialogflow.postToDialogflow(req as unknown as Request);
-          }
+          await dialogflow.postToDialogflow(req as unknown as Request);
         }
         if (event.message.type === "image") {
           const imageBinary = await line.getImageBinary(event.message.id);
@@ -194,7 +55,7 @@ exports.webhook = onRequest(async (req, res) => {
           });
           logger.log("REPLY IMG: ", msg);
           logger.log("REPLY RESIZED IMG: ", urls);
-          // await line.reply(event.replyToken, [{type: "text", text: msg}]);
+          await line.loading(userId);
           await line.replyResizeImg(event.replyToken, msg, urls);
 
           break;
@@ -226,89 +87,32 @@ exports.gold = pubsub
 
 process.env.DEBUG = "dialogflow:debug";
 
-exports.dialogflowFirebaseFulfillment = onRequest((request, response) => {
+exports.dialogflowFirebaseFulfillment = onRequest(async (request, response) => {
   const agent = new WebhookClient({request, response});
   logger.log("Dialogflow Request headers: " + JSON.stringify(request.headers));
   logger.log("Dialogflow Request body: " + JSON.stringify(request.body));
 
-  const welcome = (agent: WebhookClientType) => {
-    agent.add("Welcome to my agent!");
-  };
+  const userId =
+    request.body.originalDetectIntentRequest.payload.data.source.userId;
+  const replyToken =
+    request.body.originalDetectIntentRequest.payload.data.replyToken;
+
+  const userData = await firestore.getUser(userId);
+
+  let userMode = "Gemini";
+  if (userData == undefined) {
+    const profile = await line.getUserProfile(userId);
+    await firestore.updateUser(userMode, profile.data);
+  } else {
+    userMode = userData.mode;
+  }
 
   const fallback = async (agent: WebhookClientType) => {
-    const userId =
-      request.body.originalDetectIntentRequest.payload.data.source.userId;
-    const replyToken =
-      request.body.originalDetectIntentRequest.payload.data.replyToken;
-
-    const question = "คุณต้องการสอบถามกับ Bot หรือ Staff";
-    const answer1 = "สอบถามกับ Bot " + agent.query;
-    const answer2 = "สอบถามกับ Staff " + agent.query;
-
-    logger.log("UserId: " + userId);
-    let mode = myCache.get(userId);
-    logger.log("Mode: " + mode);
-    if (mode === undefined) {
-      mode = "Dialogflow";
-    }
-
-    let notifyStatus = myCache.get("Notify" + userId);
-    if (notifyStatus === undefined) {
-      notifyStatus = true;
-    }
-
-    if (agent.query == "reset") {
-      mode = "Dialogflow";
-      logger.log("Change Mode to: " + mode);
-      await line.reply(replyToken, [
-        {
-          type: "text",
-          text: "ระบบตั้งค่าเริ่มต้นให้คุณแล้ว สอบถามได้เลยค่ะ",
-        },
-      ]);
-      myCache.set(userId, mode, 600);
-      logger.log("Lastest Mode: " + mode);
-    }
-
-    let modifiedQuery = agent.query;
-    if (mode == "bot") {
-      modifiedQuery = "สอบถามกับ Bot" + modifiedQuery;
-    } else if (mode == "staff") {
-      modifiedQuery = "สอบถามกับ Staff" + agent.query;
-    }
-
-    if (modifiedQuery.includes("สอบถามกับ Staff")) {
-      mode = "staff";
-      logger.log("Change Mode to: " + mode);
-      const profile = await line.getUserProfile(userId);
-      logger.log(profile.data);
-      if (notifyStatus) {
-        line.notify({
-          message:
-            "มีผู้ใช้ชื่อ " +
-            profile.data.displayName +
-            " ต้องการติดต่อ " +
-            modifiedQuery,
-          imageFullsize: profile.data.pictureUrl,
-          imageThumbnail: profile.data.pictureUrl,
-        });
-        await line.reply(replyToken, [
-          {
-            type: "text",
-
-            text:
-              modifiedQuery +
-              " เราได้แจ้งเตือนไปยัง Staff แล้วค่ะ Staff จะรีบมาตอบนะคะ",
-          },
-        ]);
-      }
-      myCache.set("Notify" + userId, false, 600);
-    } else if (modifiedQuery.includes("สอบถามกับ Bot")) {
-      mode = "bot";
-      logger.log("Change Mode to: " + mode);
-      let question = modifiedQuery;
-      question = question.replace("สอบถามกับ Bot", "");
-      const msg = await gemini.chat(question);
+    logger.log("Fallback User Mode " + userMode);
+    switch (userMode.toLocaleLowerCase()) {
+    case "gemini": {
+      const msg = await gemini.chat(agent.query);
+      await line.loading(userId);
       await line.reply(replyToken, [
         {
           type: "text",
@@ -319,43 +123,44 @@ exports.dialogflowFirebaseFulfillment = onRequest((request, response) => {
           text: msg,
         },
       ]);
-    } else {
-      mode = "Dialogflow";
-
+      break;
+    }
+    case "chatgpt": {
+      const msg = await gemini.chat(agent.query);
+      await line.loading(userId);
       await line.reply(replyToken, [
         {
           type: "text",
-          text: question,
           sender: {
-            name: "Dialogflow",
-            // iconUrl: "https://wutthipong.info/images/geminiicon.png",
+            name: "Gemini",
+            iconUrl: "https://wutthipong.info/images/geminiicon.png",
           },
-          quickReply: {
-            items: [
-              {
-                type: "action",
-                action: {
-                  type: "message",
-                  label: "สอบถามกับ Bot",
-                  text: answer1,
-                },
-              },
-              {
-                type: "action",
-                action: {
-                  type: "message",
-                  label: "สอบถามกับ Staff",
-                  text: answer2,
-                },
-              },
-            ],
-          },
+          text: msg,
         },
       ]);
+      break;
     }
-
-    myCache.set(userId, mode, 600);
-    logger.log("Lastest Mode: " + mode);
+    default: {
+      const notifyStatus = [
+        ...((myCache.get("NotifyTheStaff") as Array<string>) ?? []),
+      ];
+      if (!notifyStatus.includes(userId)) {
+        notifyStatus.push(userId);
+        await line.notify({
+          message:
+              "มีผู้ใช้ชื่อ " +
+              userData?.displayName +
+              " ต้องการติดต่อ " +
+              agent.query,
+          imageFullsize: userData?.pictureUrl,
+          imageThumbnail: userData?.pictureUrl,
+        });
+        agent.add("เราได้แจ้งเตือนไปยัง ภัทร แล้วค่ะ รอสักครู่นะคะ");
+      }
+      myCache.set("NotifyTheStaff", notifyStatus, 600);
+      break;
+    }
+    }
   };
 
   const bodyMassIndex = (agent: WebhookClientType) => {
@@ -378,9 +183,75 @@ exports.dialogflowFirebaseFulfillment = onRequest((request, response) => {
     agent.add(result);
   };
 
+  const mode = async () => {
+    await line.loading(userId);
+    await line.reply(replyToken, [
+      {
+        type: "text",
+        text:
+          "ตอนนี้คุณอยู่ในโหมดคคุยกับ " +
+          userMode +
+          " หากต้องการเปลี่ยนโหมดสามารถเลือกได้เลยค่ะ",
+        quickReply: {
+          items: [
+            {
+              type: "action",
+              action: {
+                type: "message",
+                label: "Gemini",
+                text: "ขอคุยกับ Gemini",
+              },
+            },
+            {
+              type: "action",
+              action: {
+                type: "message",
+                label: "ChatGPT",
+                text: "ขอคุยกับ ChatGPT",
+              },
+            },
+            {
+              type: "action",
+              action: {
+                type: "message",
+                label: "Pat",
+                text: "ขอคุยกับ Pat",
+              },
+            },
+          ],
+        },
+      },
+    ]);
+  };
+
+  const geminiMode = async (agent: WebhookClientType) => {
+    logger.log("Change mode to Gemini");
+    await firestore.updateUser("gemini", userData);
+    agent.add(
+      "คุณได้เปลี่ยนเป็นโหมดคุยกับ gemini แล้ว สามารถสอบถามต่อได้เลยค่ะ"
+    );
+  };
+
+  const chatGPTMode = async (agent: WebhookClientType) => {
+    logger.log("Change mode to ChatGPT");
+    await firestore.updateUser("gemini", userData);
+    agent.add(
+      "คุณได้เปลี่ยนเป็นโหมดคุยกับ ChatGPT แล้ว สามารถสอบถามต่อได้เลยค่ะ"
+    );
+  };
+
+  const patMode = async (agent: WebhookClientType) => {
+    logger.log("Change mode to ญat");
+    await firestore.updateUser("pat", userData);
+    agent.add("คุณได้เปลี่ยนเป็นโหมดคุยกับ ภัทร แล้ว สามารถสอบถามต่อได้เลยค่ะ");
+  };
+
   const intentMap = new Map();
-  intentMap.set("Default Welcome Intent", welcome);
   intentMap.set("Default Fallback Intent", fallback);
   intentMap.set("BMI - custom - yes", bodyMassIndex);
+  intentMap.set("Mode", mode);
+  intentMap.set("Mode - custom - Gemini", geminiMode);
+  intentMap.set("Mode - custom - ChatGPT", chatGPTMode);
+  intentMap.set("Mode - custom - Pat", patMode);
   agent.handleRequest(intentMap);
 });
