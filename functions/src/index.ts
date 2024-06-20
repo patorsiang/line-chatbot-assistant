@@ -1,3 +1,4 @@
+/* eslint-disable max-len */
 /**
  * Import function triggers from their respective submodules:
  *
@@ -20,6 +21,7 @@ const myCache = new NodeCache();
 
 import * as line from "./utils/line";
 import * as gemini from "./utils/gemini";
+import * as openai from "./utils/openai";
 import * as storage from "./utils/cloudstorage";
 import * as firestore from "./utils/firestore";
 import * as dialogflow from "./utils/dialogflow";
@@ -38,7 +40,7 @@ exports.webhook = onRequest(async (req, res) => {
     const events = req.body.events;
 
     for (const event of events) {
-      const userId = events.source.userId;
+      const userId = event.source.userId;
       switch (event.type) {
       case "message":
         if (event.message.type === "text") {
@@ -112,13 +114,13 @@ exports.dialogflowFirebaseFulfillment = onRequest(async (request, response) => {
     switch (userMode.toLocaleLowerCase()) {
     case "gemini": {
       const msg = await gemini.chat(agent.query);
-      await line.loading(userId);
       await line.reply(replyToken, [
         {
           type: "text",
           sender: {
             name: "Gemini",
-            iconUrl: "https://wutthipong.info/images/geminiicon.png",
+            // iconUrl: "https://wutthipong.info/images/geminiicon.png",
+            iconUrl: `https://firebasestorage.googleapis.com/v0/b/patorsiangassistant.appspot.com/o/profile_icon%2Fgemini.png?alt=media&token=${process.env.GEMINI_ICON_TOKEN}`,
           },
           text: msg,
         },
@@ -126,14 +128,14 @@ exports.dialogflowFirebaseFulfillment = onRequest(async (request, response) => {
       break;
     }
     case "chatgpt": {
-      const msg = await gemini.chat(agent.query);
-      await line.loading(userId);
+      const msg = await openai.chat(agent.query);
       await line.reply(replyToken, [
         {
           type: "text",
           sender: {
-            name: "Gemini",
-            iconUrl: "https://wutthipong.info/images/geminiicon.png",
+            name: "ChatGPT",
+            // iconUrl: "https://wutthipong.info/images/geminiicon.png",
+            iconUrl: `https://firebasestorage.googleapis.com/v0/b/patorsiangassistant.appspot.com/o/profile_icon%2Fchatgpt.png?alt=media&token=${process.env.CHATGPT_ICON_TOKEN}`,
           },
           text: msg,
         },
@@ -184,7 +186,6 @@ exports.dialogflowFirebaseFulfillment = onRequest(async (request, response) => {
   };
 
   const mode = async () => {
-    await line.loading(userId);
     await line.reply(replyToken, [
       {
         type: "text",
@@ -234,7 +235,7 @@ exports.dialogflowFirebaseFulfillment = onRequest(async (request, response) => {
 
   const chatGPTMode = async (agent: WebhookClientType) => {
     logger.log("Change mode to ChatGPT");
-    await firestore.updateUser("gemini", userData);
+    await firestore.updateUser("chatgpt", userData);
     agent.add(
       "คุณได้เปลี่ยนเป็นโหมดคุยกับ ChatGPT แล้ว สามารถสอบถามต่อได้เลยค่ะ"
     );
