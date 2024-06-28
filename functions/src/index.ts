@@ -1,4 +1,3 @@
-/* eslint-disable max-len */
 /**
  * Import function triggers from their respective submodules:
  *
@@ -15,18 +14,22 @@ import {
   WebhookClient,
   type WebhookClient as WebhookClientType,
 } from "dialogflow-fulfillment";
-// for accessing the db connection
-import * as NodeCache from "node-cache";
-const myCache = new NodeCache();
 
 import * as line from "./utils/line";
 import * as gemini from "./utils/gemini";
-import * as openai from "./utils/openai";
 import * as storage from "./utils/cloudstorage";
 import * as firestore from "./utils/firestore";
 import * as dialogflow from "./utils/dialogflow";
 import {getCurrentGoldPrice} from "./utils/gold";
-import {shortenUrl} from "./utils/fullfilment";
+import {
+  shortenUrl,
+  bodyMassIndex,
+  modeFunc,
+  geminiModeFunc,
+  chatGPTModeFunc,
+  patModeFunc,
+  fallbackFunc,
+} from "./utils/fullfilment";
 // Start writing functions
 // https://firebase.google.com/docs/functions/typescript
 
@@ -110,143 +113,22 @@ exports.dialogflowFirebaseFulfillment = onRequest(async (request, response) => {
     userMode = userData.mode;
   }
 
-  const fallback = async (agent: WebhookClientType) => {
-    logger.log("Fallback User Mode " + userMode);
-    switch (userMode.toLocaleLowerCase()) {
-    case "gemini": {
-      const msg = await gemini.chat(agent.query);
-      await line.reply(replyToken, [
-        {
-          type: "text",
-          sender: {
-            name: "Gemini",
-            // iconUrl: "https://wutthipong.info/images/geminiicon.png",
-            iconUrl: `https://firebasestorage.googleapis.com/v0/b/patorsiangassistant.appspot.com/o/profile_icon%2Fgemini.png?alt=media&token=${process.env.GEMINI_ICON_TOKEN}`,
-          },
-          text: msg,
-        },
-      ]);
-      break;
-    }
-    case "chatgpt": {
-      const msg = await openai.chat(agent.query);
-      await line.reply(replyToken, [
-        {
-          type: "text",
-          sender: {
-            name: "ChatGPT",
-            // iconUrl: "https://wutthipong.info/images/geminiicon.png",
-            iconUrl: `https://firebasestorage.googleapis.com/v0/b/patorsiangassistant.appspot.com/o/profile_icon%2Fchatgpt.png?alt=media&token=${process.env.CHATGPT_ICON_TOKEN}`,
-          },
-          text: msg,
-        },
-      ]);
-      break;
-    }
-    default: {
-      const notifyStatus = [
-        ...((myCache.get("NotifyTheStaff") as Array<string>) ?? []),
-      ];
-      if (!notifyStatus.includes(userId)) {
-        notifyStatus.push(userId);
-        await line.notify({
-          message:
-              "มีผู้ใช้ชื่อ " +
-              userData?.displayName +
-              " ต้องการติดต่อ " +
-              agent.query,
-          imageFullsize: userData?.pictureUrl,
-          imageThumbnail: userData?.pictureUrl,
-        });
-        agent.add("เราได้แจ้งเตือนไปยัง ภัทร แล้วค่ะ รอสักครู่นะคะ");
-      }
-      myCache.set("NotifyTheStaff", notifyStatus, 600);
-      break;
-    }
-    }
-  };
+  const fallback = async (agent: WebhookClientType) =>
+    fallbackFunc({
+      agent,
+      userMode,
+      replyToken,
+      userId,
+      userData,
+    });
 
-  const bodyMassIndex = (agent: WebhookClientType) => {
-    const weight = agent.parameters.weight as unknown as number;
-    const height = (agent.parameters.height as unknown as number) / 100;
-    const bmi = Number((weight / (height * height)).toFixed(2));
-    let result = "ขออภัย หนูไม่เข้าใจ";
-
-    if (bmi < 18.5) {
-      result = "คุณผอมไป กินข้าวบ้างนะ";
-    } else if (bmi >= 18.5 && bmi <= 22.9) {
-      result = "คุณหุ่นดีจุงเบย";
-    } else if (bmi >= 23 && bmi <= 24.9) {
-      result = "คุณเริ่มจะท้วมแล้วนะ";
-    } else if (bmi >= 25.8 && bmi <= 29.9) {
-      result = "คุณอ้วนละ ออกกำลังกายหน่อยนะ";
-    } else if (bmi > 30) {
-      result = "คุณอ้วนเกินไปละ หาหมอเหอะ";
-    }
-    agent.add(result);
-  };
-
-  const mode = async () => {
-    await line.reply(replyToken, [
-      {
-        type: "text",
-        text:
-          "ตอนนี้คุณอยู่ในโหมดคคุยกับ " +
-          userMode +
-          " หากต้องการเปลี่ยนโหมดสามารถเลือกได้เลยค่ะ",
-        quickReply: {
-          items: [
-            {
-              type: "action",
-              action: {
-                type: "message",
-                label: "Gemini",
-                text: "ขอคุยกับ Gemini",
-              },
-            },
-            {
-              type: "action",
-              action: {
-                type: "message",
-                label: "ChatGPT",
-                text: "ขอคุยกับ ChatGPT",
-              },
-            },
-            {
-              type: "action",
-              action: {
-                type: "message",
-                label: "Pat",
-                text: "ขอคุยกับ Pat",
-              },
-            },
-          ],
-        },
-      },
-    ]);
-  };
-
-  const geminiMode = async (agent: WebhookClientType) => {
-    logger.log("Change mode to Gemini");
-    await firestore.updateUser("gemini", userData);
-    agent.add(
-      "คุณได้เปลี่ยนเป็นโหมดคุยกับ gemini แล้ว สามารถสอบถามต่อได้เลยค่ะ"
-    );
-  };
-
-  const chatGPTMode = async (agent: WebhookClientType) => {
-    logger.log("Change mode to ChatGPT");
-    await firestore.updateUser("chatgpt", userData);
-    agent.add(
-      "คุณได้เปลี่ยนเป็นโหมดคุยกับ ChatGPT แล้ว สามารถสอบถามต่อได้เลยค่ะ"
-    );
-  };
-
-  const patMode = async (agent: WebhookClientType) => {
-    logger.log("Change mode to ญat");
-    await firestore.updateUser("pat", userData);
-    agent.add("คุณได้เปลี่ยนเป็นโหมดคุยกับ ภัทร แล้ว สามารถสอบถามต่อได้เลยค่ะ");
-  };
+  const mode = async () => modeFunc({replyToken, userMode});
+  const geminiMode = async (agent: WebhookClientType) =>
+    geminiModeFunc(agent, userData);
+  const chatGPTMode = async (agent: WebhookClientType) =>
+    chatGPTModeFunc(agent, userData);
+  const patMode = async (agent: WebhookClientType) =>
+    patModeFunc(agent, userData);
 
   const intentMap = new Map();
   intentMap.set("Default Fallback Intent", fallback);
