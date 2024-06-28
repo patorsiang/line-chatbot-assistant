@@ -26,6 +26,7 @@ import * as storage from "./utils/cloudstorage";
 import * as firestore from "./utils/firestore";
 import * as dialogflow from "./utils/dialogflow";
 import {getCurrentGoldPrice} from "./utils/gold";
+import {shortenUrl} from "./utils/fullfilment";
 // Start writing functions
 // https://firebase.google.com/docs/functions/typescript
 
@@ -254,5 +255,6 @@ exports.dialogflowFirebaseFulfillment = onRequest(async (request, response) => {
   intentMap.set("Mode - custom - Gemini", geminiMode);
   intentMap.set("Mode - custom - ChatGPT", chatGPTMode);
   intentMap.set("Mode - custom - Pat", patMode);
+  intentMap.set("Shorten URL", shortenUrl);
   agent.handleRequest(intentMap);
 });

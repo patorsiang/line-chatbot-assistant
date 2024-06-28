@@ -12,7 +12,7 @@
   - [x] <https://wutthipong.medium.com/ทำ-line-chatbot-เชื่อมกับ-dialogflow-และ-gemini-โดยเลือกถามคนหรือถามบอทได้-ตอนที่-2-line-เชื่อมกับ-4e16570bf745>
 - [x] ChatGPT bot in LINE Group to answer all of your questions!
   - <https://medium.com/linedevth/line-chatgpt-group-9b2fc5ea94d3>
-- [ ] Building Shorten URL Chatbot using Dialogflow and Bitly API
+- [x] Building Shorten URL Chatbot using Dialogflow and Bitly API
 - [ ] Handle Non-Text Event with Dialogflow
 - [ ] Building Package Tracking Chatbot with ThailandPost API
 - [ ] Let's build a cool Jukebox Chatbot in LINE via Spotify API
