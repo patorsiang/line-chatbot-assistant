@@ -48,3 +48,17 @@ export const getUser = async (userId: string) => {
     throw error; // throw the error again or return a default value here
   }
 };
+
+export const updateMember = async (
+  userId: string,
+  doc: {
+    uid: string;
+    name: string;
+    latitude: string;
+    longitude: string;
+    selected_date: number;
+  }
+) => {
+  logger.log("updateMember");
+  await db.collection("member").doc(userId).set(doc);
+};

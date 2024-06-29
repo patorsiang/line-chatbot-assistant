@@ -29,6 +29,7 @@ import {
   chatGPTModeFunc,
   patModeFunc,
   fallbackFunc,
+  registerFunction,
 } from "./utils/fullfilment";
 // Start writing functions
 // https://firebase.google.com/docs/functions/typescript
@@ -130,6 +131,9 @@ exports.dialogflowFirebaseFulfillment = onRequest(async (request, response) => {
   const patMode = async (agent: WebhookClientType) =>
     patModeFunc(agent, userData);
 
+  const register = async (agent: WebhookClientType) =>
+    registerFunction(agent, userId);
+
   const intentMap = new Map();
   intentMap.set("Default Fallback Intent", fallback);
   intentMap.set("BMI - custom - yes", bodyMassIndex);
@@ -138,5 +142,6 @@ exports.dialogflowFirebaseFulfillment = onRequest(async (request, response) => {
   intentMap.set("Mode - custom - ChatGPT", chatGPTMode);
   intentMap.set("Mode - custom - Pat", patMode);
   intentMap.set("Shorten URL", shortenUrl);
+  intentMap.set("Register - date", register);
   agent.handleRequest(intentMap);
 });

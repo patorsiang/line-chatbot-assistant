@@ -13,7 +13,7 @@
 - [x] ChatGPT bot in LINE Group to answer all of your questions!
   - <https://medium.com/linedevth/line-chatgpt-group-9b2fc5ea94d3>
 - [x] Building Shorten URL Chatbot using Dialogflow and Bitly API
-- [ ] Handle Non-Text Event with Dialogflow
+- [x] Handle Non-Text Event with Dialogflow
 - [ ] Building Package Tracking Chatbot with ThailandPost API
 - [ ] Let's build a cool Jukebox Chatbot in LINE via Spotify API
 - [ ] Create LINE Chatbot to extract audio files in Thai with Google Speech-to-Text API
