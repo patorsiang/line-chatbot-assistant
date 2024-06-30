@@ -10,3 +10,8 @@ export const LINE_NOTIFY_HEADER = {
   "Content-Type": "application/x-www-form-urlencoded",
   "Authorization": "Bearer " + process.env.NOTIFY_TOKEN,
 };
+
+export const THAIPOST_API_HEADER = {
+  "Content-Type": "application/json",
+  "Authorization": "Token " + process.env.THAIPOST_API_TOKEN ?? "",
+};

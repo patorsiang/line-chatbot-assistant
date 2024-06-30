@@ -30,6 +30,7 @@ import {
   patModeFunc,
   fallbackFunc,
   registerFunction,
+  thaipost,
 } from "./utils/fullfilment";
 // Start writing functions
 // https://firebase.google.com/docs/functions/typescript
@@ -143,5 +144,6 @@ exports.dialogflowFirebaseFulfillment = onRequest(async (request, response) => {
   intentMap.set("Mode - custom - Pat", patMode);
   intentMap.set("Shorten URL", shortenUrl);
   intentMap.set("Register - date", register);
+  intentMap.set("Thaipost", thaipost);
   agent.handleRequest(intentMap);
 });
