@@ -19,6 +19,7 @@
     "axios": "^1.7.2",
     "bitly": "^7.1.2",
     "cheerio": "^1.0.0-rc.12",
+    "crypto": "^1.0.1",
     "dialogflow-fulfillment": "^0.6.1",
     "firebase-admin": "^12.1.1",
     "firebase-functions": "^5.0.0",

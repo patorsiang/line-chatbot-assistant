@@ -48,10 +48,12 @@ exports.webhook = onRequest(async (req, res) => {
       const userId = event.source.userId;
       switch (event.type) {
       case "message":
-        if (event.message.type === "text") {
-          await dialogflow.postToDialogflow(req as unknown as Request);
-        }
-        if (event.message.type === "image") {
+        switch (event.message.type) {
+        case "text":
+          await dialogflow.postToDialogflow(req);
+          break;
+
+        case "image": {
           const imageBinary = await line.getImageBinary(event.message.id);
           const msg = await gemini.multimodal(imageBinary);
           // deepcode ignore PT: TODO: come back later to handle it
@@ -64,10 +66,33 @@ exports.webhook = onRequest(async (req, res) => {
           logger.log("REPLY RESIZED IMG: ", urls);
           await line.loading(userId);
           await line.replyResizeImg(event.replyToken, msg, urls);
+          break;
+        }
 
+        case "location": {
+          const locationText = `LAT : ${event.message.latitude} , LNG : ${event.message.longitude}`;
+          logger.debug("REPLY LOCATION: ", locationText);
+          const locationMsg = dialogflow.createLineTextEvent(
+            req,
+            event,
+            locationText
+          );
+          logger.debug("REPLY LOCATION MSG: ", JSON.stringify(locationMsg));
+          await dialogflow.convertToDialogflow(req, locationMsg);
+          break;
+        }
+
+        default:
           break;
         }
         break;
+
+      case "postback": {
+        const dateText = `DATE: ${event.postback.params.date}`;
+        const dateMsg = dialogflow.createLineTextEvent(req, event, dateText);
+        await dialogflow.convertToDialogflow(req, dateMsg);
+        break;
+      }
       }
     }
   }
