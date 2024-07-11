@@ -70,6 +70,7 @@ exports.webhook = onRequest(async (req, res) => {
         }
 
         case "location": {
+          logger.log("LOCATION:", JSON.stringify(event.message));
           const locationText = `LAT : ${event.message.latitude} , LNG : ${event.message.longitude}`;
           logger.debug("REPLY LOCATION: ", locationText);
           const locationMsg = dialogflow.createLineTextEvent(
@@ -79,6 +80,20 @@ exports.webhook = onRequest(async (req, res) => {
           );
           logger.debug("REPLY LOCATION MSG: ", JSON.stringify(locationMsg));
           await dialogflow.convertToDialogflow(req, locationMsg);
+          break;
+        }
+
+        case "sticker": {
+          logger.log("STICKER:", JSON.stringify(event.message));
+          const keywordsText = `STICKER: ${event.message.keywords.toString()}`;
+          logger.debug("REPLY STICKER: ", keywordsText);
+          const keywordMsg = dialogflow.createLineTextEvent(
+            req,
+            event,
+            keywordsText
+          );
+          logger.debug("REPLY STICKER MSG: ", JSON.stringify(keywordMsg));
+          await dialogflow.convertToDialogflow(req, keywordMsg);
           break;
         }
 
@@ -157,7 +172,7 @@ exports.dialogflowFirebaseFulfillment = onRequest(async (request, response) => {
     patModeFunc(agent, userData);
 
   const register = async (agent: WebhookClientType) =>
-    registerFunction(agent, userId);
+    registerFunction(agent, replyToken, userId);
 
   const intentMap = new Map();
   intentMap.set("Default Fallback Intent", fallback);
@@ -167,6 +182,6 @@ exports.dialogflowFirebaseFulfillment = onRequest(async (request, response) => {
   intentMap.set("Mode - custom - ChatGPT", chatGPTMode);
   intentMap.set("Mode - custom - Pat", patMode);
   intentMap.set("Shorten URL", shortenUrl);
-  intentMap.set("Register - date", register);
+  intentMap.set("Register - sticker", register);
   agent.handleRequest(intentMap);
 });
