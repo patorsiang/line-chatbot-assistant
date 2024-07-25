@@ -50,7 +50,7 @@ export const reply = (token: string, payload: LINE_MESSAGING_PAYLOAD_TYPE) => {
   });
 };
 
-export const broadcast = (priceCurrent: string) => {
+export const goldBroadcast = (priceCurrent: string) => {
   const prices = priceCurrent.split("|");
   return axios({
     method: "post",
@@ -253,4 +253,96 @@ export const loading = async (userId: string) => {
     // Handle the error or rethrow it if needed
     throw error;
   }
+};
+
+export const gbpthbBroadcast = (rate: Array<string>) => {
+  return axios({
+    method: "post",
+    url: `${LINE_MESSAGING_API}/message/broadcast`,
+    headers: LINE_HEADER,
+    data: JSON.stringify({
+      messages: [
+        {
+          type: "flex",
+          altText: "Flex Message",
+          contents: {
+            type: "bubble",
+            size: "giga",
+            body: {
+              type: "box",
+              layout: "vertical",
+              paddingAll: "8%",
+              backgroundColor: "#000040",
+              contents: [
+                {
+                  type: "text",
+                  text: "GBP - THB",
+                  weight: "bold",
+                  size: "xl",
+                  align: "center",
+                },
+                {
+                  type: "box",
+                  layout: "baseline",
+                  spacing: "sm",
+                  contents: [
+                    {
+                      type: "text",
+                      text: "avg ของคุณ",
+                      wrap: true,
+                      color: "#FAF9F6",
+                      flex: 1,
+                      align: "center",
+                    },
+                    {
+                      type: "text",
+                      text: "rate ปัจจุบัน",
+                      flex: 1,
+                      color: "#FAF9F6",
+                      align: "center",
+                    },
+                  ],
+                },
+                {
+                  type: "separator",
+                },
+                {
+                  type: "box",
+                  layout: "vertical",
+                  margin: "xxl",
+                  spacing: "sm",
+                  contents: [
+                    {
+                      type: "box",
+                      layout: "baseline",
+                      spacing: "sm",
+                      contents: [
+                        {
+                          type: "text",
+                          text: rate[0],
+                          wrap: true,
+                          size: "sm",
+                          flex: 1,
+                          color: "#FFFFFF",
+                          align: "center",
+                        },
+                        {
+                          type: "text",
+                          text: rate[1],
+                          flex: 1,
+                          size: "sm",
+                          color: "#FFFFFF",
+                          align: "center",
+                        },
+                      ],
+                    },
+                  ],
+                },
+              ],
+            },
+          },
+        },
+      ],
+    }),
+  });
 };

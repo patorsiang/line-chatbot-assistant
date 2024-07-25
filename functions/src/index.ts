@@ -21,6 +21,8 @@ import * as storage from "./utils/cloudstorage";
 import * as firestore from "./utils/firestore";
 import * as dialogflow from "./utils/dialogflow";
 import {getCurrentGoldPrice} from "./utils/gold";
+import * as sheet from "./utils/googlesheet";
+
 import {
   shortenUrl,
   bodyMassIndex,
@@ -125,7 +127,7 @@ exports.gold = pubsub
     const priceLast = await firestore.getLastGoldPrice();
     if (!priceLast.exists || priceLast.data()?.price !== priceCurrent) {
       firestore.updateGoldPrice(priceCurrent);
-      line.broadcast(priceCurrent);
+      line.goldBroadcast(priceCurrent);
       logger.log("BROADCAST:", priceCurrent);
     }
 
@@ -185,3 +187,8 @@ exports.dialogflowFirebaseFulfillment = onRequest(async (request, response) => {
   intentMap.set("Register - sticker", register);
   agent.handleRequest(intentMap);
 });
+
+export const notifyFromGoogleSheet = pubsub
+  .schedule("*/20 * * * *")
+  .timeZone("Asia/Bangkok")
+  .onRun(sheet.notifyFromGoogleSheetFunc);

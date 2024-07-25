@@ -181,3 +181,9 @@ flowchart TB
 ```
 
 ## Thing 2: Test Our Idea
+
+### GBP - THB notification
+
+Note: it can be improved to track stock prices like the link.
+
+ref: <https://www.mikkipastel.com/2-in-1-google-finance-google-sheet-to-line-chatbot/?fbclid=IwZXh0bgNhZW0CMTAAAR3KxsPhr6oyda7Z-RtdiWfTeYpnAdGxp429BXQQk_iPBU5ZWcZWljpoXcg_aem_8rxo72vxVS-8--S6Oc4g7Q#google_vignette>

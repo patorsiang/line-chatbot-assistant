@@ -1,7 +1,7 @@
 /* eslint-disable max-len */
 
 import * as logger from "firebase-functions/logger";
-import * as NodeCache from "node-cache";
+import NodeCache from "node-cache";
 const myCache = new NodeCache();
 
 import {type WebhookClient as WebhookClientType} from "dialogflow-fulfillment";
