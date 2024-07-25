@@ -280,6 +280,7 @@ export const gbpthbBroadcast = (rate: Array<string>) => {
                   weight: "bold",
                   size: "xl",
                   align: "center",
+                  color: "#FAF9F6",
                 },
                 {
                   type: "box",
