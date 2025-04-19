@@ -7,9 +7,9 @@
  * See a full list of supported triggers at https://firebase.google.com/docs/functions
  */
 
-import {onRequest} from "firebase-functions/v2/https";
+import { onRequest } from "firebase-functions/v2/https";
 import * as logger from "firebase-functions/logger";
-import {pubsub} from "firebase-functions";
+import { pubsub } from "firebase-functions";
 import {
   WebhookClient,
   type WebhookClient as WebhookClientType,
@@ -20,8 +20,7 @@ import * as gemini from "./utils/gemini";
 import * as storage from "./utils/cloudstorage";
 import * as firestore from "./utils/firestore";
 import * as dialogflow from "./utils/dialogflow";
-import {getCurrentGoldPrice} from "./utils/gold";
-import * as sheet from "./utils/googlesheet";
+import { getCurrentGoldPrice } from "./utils/gold";
 
 import {
   shortenUrl,
@@ -49,67 +48,67 @@ exports.webhook = onRequest(async (req, res) => {
     for (const event of events) {
       const userId = event.source.userId;
       switch (event.type) {
-      case "message":
-        switch (event.message.type) {
-        case "text":
-          await dialogflow.postToDialogflow(req);
+        case "message":
+          switch (event.message.type) {
+            case "text":
+              await dialogflow.postToDialogflow(req);
+              break;
+
+            case "image": {
+              const imageBinary = await line.getImageBinary(event.message.id);
+              const msg = await gemini.multimodal(imageBinary);
+              // deepcode ignore PT: TODO: come back later to handle it
+              const urls = await storage.upload({
+                timestamp: event.timestamp,
+                userId: event.source.userId,
+                imageBinary,
+              });
+              logger.log("REPLY IMG: ", msg);
+              logger.log("REPLY RESIZED IMG: ", urls);
+              await line.loading(userId);
+              await line.replyResizeImg(event.replyToken, msg, urls);
+              break;
+            }
+
+            case "location": {
+              logger.log("LOCATION:", JSON.stringify(event.message));
+              const locationText = `LAT : ${event.message.latitude} , LNG : ${event.message.longitude}`;
+              logger.debug("REPLY LOCATION: ", locationText);
+              const locationMsg = dialogflow.createLineTextEvent(
+                req,
+                event,
+                locationText
+              );
+              logger.debug("REPLY LOCATION MSG: ", JSON.stringify(locationMsg));
+              await dialogflow.convertToDialogflow(req, locationMsg);
+              break;
+            }
+
+            case "sticker": {
+              logger.log("STICKER:", JSON.stringify(event.message));
+              const keywordsText = `STICKER: ${event.message.keywords.toString()}`;
+              logger.debug("REPLY STICKER: ", keywordsText);
+              const keywordMsg = dialogflow.createLineTextEvent(
+                req,
+                event,
+                keywordsText
+              );
+              logger.debug("REPLY STICKER MSG: ", JSON.stringify(keywordMsg));
+              await dialogflow.convertToDialogflow(req, keywordMsg);
+              break;
+            }
+
+            default:
+              break;
+          }
           break;
 
-        case "image": {
-          const imageBinary = await line.getImageBinary(event.message.id);
-          const msg = await gemini.multimodal(imageBinary);
-          // deepcode ignore PT: TODO: come back later to handle it
-          const urls = await storage.upload({
-            timestamp: event.timestamp,
-            userId: event.source.userId,
-            imageBinary,
-          });
-          logger.log("REPLY IMG: ", msg);
-          logger.log("REPLY RESIZED IMG: ", urls);
-          await line.loading(userId);
-          await line.replyResizeImg(event.replyToken, msg, urls);
+        case "postback": {
+          const dateText = `DATE: ${event.postback.params.date}`;
+          const dateMsg = dialogflow.createLineTextEvent(req, event, dateText);
+          await dialogflow.convertToDialogflow(req, dateMsg);
           break;
         }
-
-        case "location": {
-          logger.log("LOCATION:", JSON.stringify(event.message));
-          const locationText = `LAT : ${event.message.latitude} , LNG : ${event.message.longitude}`;
-          logger.debug("REPLY LOCATION: ", locationText);
-          const locationMsg = dialogflow.createLineTextEvent(
-            req,
-            event,
-            locationText
-          );
-          logger.debug("REPLY LOCATION MSG: ", JSON.stringify(locationMsg));
-          await dialogflow.convertToDialogflow(req, locationMsg);
-          break;
-        }
-
-        case "sticker": {
-          logger.log("STICKER:", JSON.stringify(event.message));
-          const keywordsText = `STICKER: ${event.message.keywords.toString()}`;
-          logger.debug("REPLY STICKER: ", keywordsText);
-          const keywordMsg = dialogflow.createLineTextEvent(
-            req,
-            event,
-            keywordsText
-          );
-          logger.debug("REPLY STICKER MSG: ", JSON.stringify(keywordMsg));
-          await dialogflow.convertToDialogflow(req, keywordMsg);
-          break;
-        }
-
-        default:
-          break;
-        }
-        break;
-
-      case "postback": {
-        const dateText = `DATE: ${event.postback.params.date}`;
-        const dateMsg = dialogflow.createLineTextEvent(req, event, dateText);
-        await dialogflow.convertToDialogflow(req, dateMsg);
-        break;
-      }
       }
     }
   }
@@ -137,7 +136,7 @@ exports.gold = pubsub
 process.env.DEBUG = "dialogflow:debug";
 
 exports.dialogflowFirebaseFulfillment = onRequest(async (request, response) => {
-  const agent = new WebhookClient({request, response});
+  const agent = new WebhookClient({ request, response });
   logger.log("Dialogflow Request headers: " + JSON.stringify(request.headers));
   logger.log("Dialogflow Request body: " + JSON.stringify(request.body));
 
@@ -165,7 +164,7 @@ exports.dialogflowFirebaseFulfillment = onRequest(async (request, response) => {
       userData,
     });
 
-  const mode = async () => modeFunc({replyToken, userMode});
+  const mode = async () => modeFunc({ replyToken, userMode });
   const geminiMode = async (agent: WebhookClientType) =>
     geminiModeFunc(agent, userData);
   const chatGPTMode = async (agent: WebhookClientType) =>
@@ -187,8 +186,3 @@ exports.dialogflowFirebaseFulfillment = onRequest(async (request, response) => {
   intentMap.set("Register - sticker", register);
   agent.handleRequest(intentMap);
 });
-
-export const notifyFromGoogleSheet = pubsub
-  .schedule("*/20 * * * *")
-  .timeZone("Asia/Bangkok")
-  .onRun(sheet.notifyFromGoogleSheetFunc);

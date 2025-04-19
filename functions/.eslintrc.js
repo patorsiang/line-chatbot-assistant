@@ -11,6 +11,7 @@ module.exports = {
     "plugin:import/typescript",
     "google",
     "plugin:@typescript-eslint/recommended",
+    "prettier",
   ],
   parser: "@typescript-eslint/parser",
   parserOptions: {
@@ -25,7 +26,6 @@ module.exports = {
   rules: {
     "quotes": ["error", "double"],
     "import/no-unresolved": 0,
-    "indent": ["error", 2],
-    "max-len": ["error", {ignoreStrings: true, code: 150}],
+    "max-len": ["error", { ignoreStrings: true, code: 150 }],
   },
 };
