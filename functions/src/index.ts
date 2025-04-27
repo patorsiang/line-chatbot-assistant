@@ -23,7 +23,6 @@ import * as dialogflow from "./utils/dialogflow";
 import { getCurrentGoldPrice } from "./utils/gold";
 
 import {
-  shortenUrl,
   bodyMassIndex,
   modeFunc,
   geminiModeFunc,
@@ -182,7 +181,6 @@ exports.dialogflowFirebaseFulfillment = onRequest(async (request, response) => {
   intentMap.set("Mode - custom - Gemini", geminiMode);
   intentMap.set("Mode - custom - ChatGPT", chatGPTMode);
   intentMap.set("Mode - custom - Pat", patMode);
-  intentMap.set("Shorten URL", shortenUrl);
   intentMap.set("Register - sticker", register);
   agent.handleRequest(intentMap);
 });

@@ -9,3 +9,5 @@ node_modules/
 *.local
 
 service-account.json
+
+package-lock.json
