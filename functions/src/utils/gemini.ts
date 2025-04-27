@@ -35,13 +35,22 @@ export const textOnly = async (prompt: string) => {
   return result.response.text();
 };
 
-export const multimodal = async (imageBinary: string) => {
+export const modalForReceipt = async (imageBinary: string) => {
   // For text-and-image input (multimodal), use the gemini-pro-vision model
   const model = genAI.getGenerativeModel({
-    model: "gemini-pro-vision",
+    model: "gemini-2.0-flash-lite",
     safetySettings,
   });
-  const prompt = "ช่วยบรรยายภาพนี้ให้หน่อย";
+  const prompt = `help me to extract the text from this image into JSON format.
+  e.g. {
+    "notification_type": "",
+    "transaction_type": "",
+    "amount": "",
+    "card_used": "",
+    "merchant": "",
+    "available_balance": "",
+    "transaction_timestamp": ""
+  }`;
   const mimeType = "image/png";
 
   // Convert image binary to a GoogleGenerativeAI.Part object.
@@ -71,13 +80,13 @@ export const chat = async (prompt: string) => {
     history: [
       {
         role: "user",
-        parts: [{text: "สวัสดีจ้า"}],
+        parts: [{ text: "สวัสดีจ้า" }],
       },
       {
         role: "model",
         parts: [
           {
-            text: `สวัสดีค เราภัทรนะ จะมาชเป็นผู้ช่วยเกี่ยวกับ ${specialize.join(
+            text: `สวัสดีค เราภัทรนะ จะมาเป็นผู้ช่วยเกี่ยวกับ ${specialize.join(
               ","
             )}`,
           },

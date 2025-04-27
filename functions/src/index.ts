@@ -17,7 +17,7 @@ import {
 
 import * as line from "./utils/line";
 import * as gemini from "./utils/gemini";
-import * as storage from "./utils/cloudstorage";
+// import * as storage from "./utils/cloudstorage";
 import * as firestore from "./utils/firestore";
 import * as dialogflow from "./utils/dialogflow";
 import { getCurrentGoldPrice } from "./utils/gold";
@@ -31,6 +31,7 @@ import {
   fallbackFunc,
   registerFunction,
 } from "./utils/fullfilment";
+
 // Start writing functions
 // https://firebase.google.com/docs/functions/typescript
 
@@ -55,17 +56,10 @@ exports.webhook = onRequest(async (req, res) => {
 
             case "image": {
               const imageBinary = await line.getImageBinary(event.message.id);
-              const msg = await gemini.multimodal(imageBinary);
-              // deepcode ignore PT: TODO: come back later to handle it
-              const urls = await storage.upload({
-                timestamp: event.timestamp,
-                userId: event.source.userId,
-                imageBinary,
-              });
-              logger.log("REPLY IMG: ", msg);
-              logger.log("REPLY RESIZED IMG: ", urls);
+              const msg = await gemini.modalForReceipt(imageBinary);
+              logger.log("REPLY IMAGE:", msg);
               await line.loading(userId);
-              await line.replyResizeImg(event.replyToken, msg, urls);
+              await line.reply(event.replyToken, [{ type: "text", text: msg }]);
               break;
             }
 
